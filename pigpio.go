@@ -129,7 +129,7 @@ func pinPoll(f *os.File, pinNum int, notify chan int) {
 		if err != nil || interruptCount <= 0 {
 			continue
 		}
-		unix.Seek(int(fd.Fd), 0, io.SeekStart)
+		_, _ = unix.Seek(int(fd.Fd), 0, io.SeekStart)
 		_, _ = f.Read(b)
 		notify <- pinNum
 	}
