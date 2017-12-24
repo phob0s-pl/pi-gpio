@@ -11,20 +11,28 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Edge describes possible edge states of input pin
 type Edge uint
 
 const (
+	// EdgeFalling represents falling edge
 	EdgeFalling Edge = iota
+	// EdgeRising represents rising edge
 	EdgeRising
+	// EdgeBoth represents both falling and rising edge
 	EdgeBoth
+	// EdgeNone represents no edge and disables interrupt
 	EdgeNone
 )
 
 const (
 	pinValuePath = "/sys/class/gpio/gpio%d/value"
-	FIONREAD     = 21531
+	// FIONREAD gets the number of bytes that are immediately available for reading.
+	FIONREAD = 21531
 )
 
+// String return string representation of Edge
+// The value is compatible with gpio command
 func (e Edge) String() string {
 	switch e {
 	case EdgeFalling:
@@ -62,16 +70,19 @@ func SetPinEdge(pinNum int, edge Edge) error {
 	return nil
 }
 
+// PiGPIO is structure watching pin state change
 type PiGPIO struct {
 	Notify chan int
 }
 
+// NewPiGPIO returns allocated PiGPIO structure with selected channel size
 func NewPiGPIO(channelSize uint) *PiGPIO {
 	return &PiGPIO{
 		Notify: make(chan int, channelSize),
 	}
 }
 
+// WatchMultiPin registers multiple pins to watch for state change.
 func (p *PiGPIO) WatchMultiPin(pinNum ...int) error {
 	for i := range pinNum {
 		if err := p.WatchPin(pinNum[i]); err != nil {
@@ -81,6 +92,8 @@ func (p *PiGPIO) WatchMultiPin(pinNum ...int) error {
 	return nil
 }
 
+// WatchPin registers single pin to watch for state change.
+// When pin state changes the notification is send to PiGPIO.Notify channel
 func (p *PiGPIO) WatchPin(pinNum int) error {
 	const ()
 	b := make([]byte, 1)
@@ -122,6 +135,8 @@ func pinPoll(f *os.File, pinNum int, notify chan int) {
 	}
 }
 
+// Debouncer creates new channel which sends values from notify channel
+// after timer expires. All other values are dropped.
 func Debouncer(notify chan int, t time.Duration) chan int {
 	var (
 		changedState   bool
