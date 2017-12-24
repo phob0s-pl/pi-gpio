@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -119,4 +120,30 @@ func pinPoll(f *os.File, pinNum int, notify chan int) {
 		_, _ = f.Read(b)
 		notify <- pinNum
 	}
+}
+
+func Debouncer(notify chan int, t time.Duration) chan int {
+	var (
+		changedState   bool
+		capacity       = cap(notify)
+		debuncedNotify = make(chan int, capacity)
+		timer          = time.NewTimer(t)
+	)
+
+	go func() {
+		for {
+			select {
+			case val := <-notify:
+				if !changedState {
+					changedState = true
+					debuncedNotify <- val
+					timer.Reset(t)
+				}
+			case <-timer.C:
+				changedState = false
+			}
+		}
+	}()
+
+	return debuncedNotify
 }
